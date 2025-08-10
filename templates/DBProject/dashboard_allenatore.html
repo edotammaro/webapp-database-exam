@@ -1,0 +1,16 @@
+{% extends 'DBProject/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Dashboard Allenatore</h2>
+    <h3>Squadra: {{ squadra.nome }}</h3>
+
+    <h4>Atleti della mia squadra</h4>
+    <ul>
+        {% for atleta in atleti_squadra %}
+            <li>{{ atleta.utente.username }} (Stato: {{ atleta.stato }})</li>
+        {% empty %}
+            <li>Non ci sono atleti assegnati alla tua squadra.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

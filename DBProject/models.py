@@ -3,7 +3,6 @@ from django.contrib.auth.models import AbstractUser
 
 
 # Modello Utente personalizzato
-# Estende AbstractUser per gestire l'autenticazione in modo sicuro e affidabile.
 class Utente(AbstractUser):
     TIPO_UTENTE_SCELTE = (
         ('PRES_REGIONE', 'Presidente di Regione'),
@@ -11,8 +10,6 @@ class Utente(AbstractUser):
         ('ALLENATORE', 'Allenatore'),
         ('ATLETA', 'Atleta'),
     )
-
-    # Risoluzione dei conflitti di related_name per l'ereditarietà
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='utenti_custom',
@@ -27,9 +24,8 @@ class Utente(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
-
-    # Campo 'tipo' corretto con la sintassi delle scelte
     tipo = models.CharField(max_length=20, choices=TIPO_UTENTE_SCELTE)
+    email = models.EmailField(unique=True, null=True, blank=True)
 
     class Meta:
         verbose_name = 'Utente'
@@ -61,46 +57,61 @@ class Specialita(models.Model):
 # Modelli per la specializzazione (uno-a-uno con Utente)
 class PresidenteRegione(models.Model):
     utente = models.OneToOneField(Utente, on_delete=models.CASCADE, primary_key=True)
-    regione = models.ForeignKey(Regione, on_delete=models.CASCADE)
-
+    regione = models.OneToOneField(Regione, on_delete=models.CASCADE)
     def __str__(self):
         return f"Presidente Regione: {self.utente.username}"
 
 
-class PresidenteSquadra(models.Model):
-    utente = models.OneToOneField(Utente, on_delete=models.CASCADE, primary_key=True)
-    squadra = models.ForeignKey(Squadra, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"Presidente Squadra: {self.utente.username}"
-
-
-class Allenatore(models.Model):
-    utente = models.OneToOneField(Utente, on_delete=models.CASCADE, primary_key=True)
-    squadra = models.ForeignKey(Squadra, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"Allenatore: {self.utente.username}"
-
-
 class Atleta(models.Model):
-    STATO_SCELTE = (
-        ('OK', 'OK'),
-        ('INFORTUNATO', 'Infortunato'),
+    utente = models.OneToOneField('Utente', on_delete=models.CASCADE)
+    squadra = models.ForeignKey(
+        'Squadra',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='atleti' # Aggiunto related_name per un accesso più facile
     )
-
-    utente = models.OneToOneField(Utente, on_delete=models.CASCADE, primary_key=True)
-    squadra = models.ForeignKey(Squadra, on_delete=models.CASCADE)
-    specialita = models.CharField(max_length=100)
-    stato = models.CharField(max_length=15, choices=STATO_SCELTE, default='OK')
+    STATO_SCELTE = [
+        ('SANO', 'Sano'),
+        ('INFORTUNATO', 'Infortunato'),
+    ]
+    stato = models.CharField(max_length=15, choices=STATO_SCELTE, default='SANO')
 
     def __str__(self):
         return f"Atleta: {self.utente.username}"
 
 
+class Allenatore(models.Model):
+    utente = models.OneToOneField('Utente', on_delete=models.CASCADE)
+    squadra = models.ForeignKey(
+        'Squadra',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='allenatori' # Aggiunto related_name
+    )
+
+    def __str__(self):
+        return f"Allenatore: {self.utente.username}"
+
+
+class PresidenteSquadra(models.Model):
+    utente = models.OneToOneField('Utente', on_delete=models.CASCADE)
+    squadra = models.OneToOneField(
+        'Squadra',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='presidente' # Aggiunto related_name
+    )
+
+    def __str__(self):
+        return f"Presidente Squadra: {self.utente.username}"
+
+
 # Modello Gara
 class Gara(models.Model):
-    id_presidente_regione = models.ForeignKey(PresidenteRegione, on_delete=models.CASCADE)
+    presidente_regione = models.ForeignKey(PresidenteRegione, on_delete=models.CASCADE)
     luogo = models.CharField(max_length=200)
     data_inizio = models.DateField()
     data_fine = models.DateField()

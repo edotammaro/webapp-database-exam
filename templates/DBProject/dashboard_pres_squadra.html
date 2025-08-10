@@ -1,0 +1,74 @@
+{% extends 'DBProject/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Dashboard Presidente di Squadra</h2>
+    <h3>Benvenuto, {{ request.user.username }}</h3>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>La tua squadra: {{ squadra.nome }}</h4>
+        </div>
+        <div class="card-body">
+            <h5 class="mt-3">Presidente</h5>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    {{ presidente.utente.first_name }} {{ presidente.utente.last_name }} ({{ presidente.utente.username }})
+                </li>
+            </ul>
+
+            <h5 class="mt-4">Allenatori</h5>
+            <ul class="list-group">
+                {% for allenatore in allenatori %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ allenatore.utente.first_name }} {{ allenatore.utente.last_name }} ({{ allenatore.utente.username }})
+                    <form method="post" action="{% url 'rimuovi_membro' allenatore.id 'allenatore' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Rimuovi</button>
+                    </form>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Nessun allenatore presente.</li>
+                {% endfor %}
+            </ul>
+
+            <h5 class="mt-4">Atleti</h5>
+            <ul class="list-group">
+                {% for atleta in atleti %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ atleta.utente.first_name }} {{ atleta.utente.last_name }} ({{ atleta.utente.username }})
+                    <form method="post" action="{% url 'rimuovi_membro' atleta.id 'atleta' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Rimuovi</button>
+                    </form>
+                </li>
+                {% empty %}
+                <li class="list-group-item">Nessun atleta presente.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h4>Aggiungi un nuovo Atleta</h4>
+            <form method="post" action="{% url 'dashboard_pres_squadra' %}">
+                {% csrf_token %}
+                {{ add_atleta_form.as_p }}
+                <button type="submit" name="add_atleta" class="btn btn-primary mt-2">Aggiungi Atleta</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h4>Aggiungi un nuovo Allenatore</h4>
+            <form method="post" action="{% url 'dashboard_pres_squadra' %}">
+                {% csrf_token %}
+                {{ add_allenatore_form.as_p }}
+                <button type="submit" name="add_allenatore" class="btn btn-primary mt-2">Aggiungi Allenatore</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends 'DBProject/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Benvenuto, {{ user.username }}!</h1>
+        <p class="col-md-8 fs-4">La tua dashboard per il ruolo: {{ ruolo }}.</p>
+
+        <hr class="my-4">
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if ruolo == 'ATLETA' %}
+
+            <div class="card mb-4">
+                <div class="card-header">Gestione Stato</div>
+                <div class="card-body">
+                    <p>Il tuo stato attuale: <strong>{{ atleta.get_stato_display }}</strong></p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form_stato|crispy }}
+                        <button type="submit" class="btn btn-primary mt-3">Aggiorna Stato</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Gare Disponibili</div>
+                <ul class="list-group list-group-flush">
+                    {% for gara in gare %}
+                        <li class="list-group-item">
+                            <strong>{{ gara.luogo }}</strong> - {{ gara.data_inizio }}
+                            <a href="#" class="btn btn-sm btn-outline-primary float-end">Iscriviti</a>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Nessuna gara disponibile al momento.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">I Tuoi Risultati</div>
+                <ul class="list-group list-group-flush">
+                    {% for partecipazione in partecipazioni %}
+                        <li class="list-group-item">
+                            Gara: <strong>{{ partecipazione.id_gara.luogo }}</strong> ({{ partecipazione.id_gara.data_inizio|date:"d M Y" }})<br>
+                            Specialità: <strong>{{ partecipazione.id_specialita.nome }}</strong><br>
+                            Risultato: <strong>{{ partecipazione.risultato|default:"Nessun risultato registrato" }}</strong><br>
+                            Stato: {{ partecipazione.get_stato_iscrizione_display }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Non hai ancora partecipato a nessuna gara.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+        {% elif ruolo == 'ALLENATORE' %}
+            <div class="card mb-4">
+                <div class="card-header">Gestione Atleti della squadra {{ allenatore.squadra.nome }}</div>
+                <ul class="list-group list-group-flush">
+                    {% for atleta in atleti_squadra %}
+                        <li class="list-group-item">
+                            Atleta: <strong>{{ atleta.utente.username }}</strong><br>
+                            Stato: {{ atleta.get_stato_display }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Nessun atleta nella tua squadra.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+        {% elif ruolo == 'PRES_SQUADRA' %}
+            <div class="card mb-4">
+                <div class="card-header">Gestione Atleti della squadra {{ presidente.squadra.nome }}</div>
+                <ul class="list-group list-group-flush">
+                    {% for atleta in atleti_squadra %}
+                        <li class="list-group-item">
+                            Atleta: <strong>{{ atleta.utente.username }}</strong><br>
+                            Stato: {{ atleta.get_stato_display }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Nessun atleta nella tua squadra.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="mt-4">
+            <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-lg">Logout</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'DBProject/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Dashboard Atleta</h2>
+    <h3>Benvenuto, {{ request.user.username }}</h3>
+    <p>Stato attuale: {{ atleta.stato }}</p>
+    <p>Squadra: {{ atleta.squadra.nome }}</p>
+    <p>Qui puoi visualizzare le tue gare e i tuoi risultati.</p>
+</div>
+{% endblock %}

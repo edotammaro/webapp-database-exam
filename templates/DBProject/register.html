@@ -7,9 +7,12 @@
         <div class="col-md-6">
             <div class="card shadow-lg p-3 mb-5 bg-body rounded">
                 <div class="card-body">
-                    <h2 class="card-title text-center mb-4">Registrazione Utente</h2>
+                    <h2 class="card-title text-center mb-4">Registrati</h2>
+                    <p class="text-center">Crea un nuovo account per accedere.</p>
                     <form method="post">
-                        {% csrf_token %}  {{ form|crispy }}
+                        {% csrf_token %}
+                        {{ form|crispy }}
+
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary btn-block mt-3">Registrati</button>
                         </div>
@@ -19,4 +22,29 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ruoloSelect = document.getElementById('id_tipo');
+        const regioneField = document.getElementById('div_id_regione');
+        const nomeSquadraField = document.getElementById('div_id_nome_squadra');
+
+        function toggleFields() {
+            if (ruoloSelect.value === 'PRES_REGIONE') {
+                regioneField.style.display = 'block';
+                nomeSquadraField.style.display = 'none';
+            } else if (ruoloSelect.value === 'PRES_SQUADRA') {
+                regioneField.style.display = 'none';
+                nomeSquadraField.style.display = 'block';
+            } else {
+                regioneField.style.display = 'none';
+                nomeSquadraField.style.display = 'none';
+            }
+        }
+
+        toggleFields();
+        ruoloSelect.addEventListener('change', toggleFields);
+    });
+</script>
+
 {% endblock %}
