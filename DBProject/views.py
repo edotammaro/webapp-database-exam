@@ -36,7 +36,11 @@ def register_view(request):
     if request.method == "POST":
         form = RegistrazioneForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.save(commit=False)
+            user.nome = form.cleaned_data['nome']
+            user.cognome = form.cleaned_data['cognome']
+            user.data_nascita = form.cleaned_data['data_nascita']
+            user.save()
             messages.success(request, f"Utente '{user.username}' registrato con successo!")
             return redirect('login')
         else:
@@ -180,7 +184,6 @@ def dashboard_allenatore(request):
     for gs in gare_specialita:
         forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
 
-        # Recupera gli iscritti per ogni gara-specialità
         iscritti_per_gara[gs.pk] = Partecipazione.objects.filter(
             id_gara=gs.id_gara,
             id_specialita=gs.id_specialita
@@ -326,7 +329,7 @@ def aggiorna_stato_atleta(request):
                 partecipazioni_rimosse = Partecipazione.objects.filter(id_atleta=atleta).delete()
                 if partecipazioni_rimosse[0] > 0:
                     messages.warning(request,
-                                     f"Sei stato dichiarato infortunato. Sono state rimosse {partecipazioni_rimosse[0]} iscrizioni a gare.")
+                                     f"Sei stato dichiarato infortunato. Sono state rimosse {partecipazioni[0]} iscrizioni a gare.")
 
             form.save()
             messages.success(request, f"Il tuo stato è stato aggiornato a '{atleta.get_stato_display()}'.")
