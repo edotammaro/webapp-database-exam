@@ -1,10 +1,25 @@
 {% extends 'DBProject/base.html' %}
+{% load app_filters %}
+
 {% block content %}
 <div class="container mt-5">
     <h2>Dashboard Atleta</h2>
     <h3>Benvenuto, {{ request.user.username }}</h3>
-    <p>Stato attuale: {{ atleta.stato }}</p>
-    <p>Squadra: {{ atleta.squadra.nome }}</p>
-    <p>Qui puoi visualizzare le tue gare e i tuoi risultati.</p>
+    {% if atleta %}
+        <p>Fai parte della squadra: {{ atleta.squadra.nome }}</p>
+
+        <div class="card p-4 mt-4">
+            <h4>Aggiorna il tuo stato di salute</h4>
+            <p>Stato attuale: <strong>{{ atleta.get_stato_display }}</strong></p>
+            <form action="{% url 'aggiorna_stato_atleta' %}" method="post">
+                {% csrf_token %}
+                {{ form_stato.as_p }}
+                <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
+            </form>
+        </div>
+
+    {% else %}
+        <p>Non sei ancora assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.</p>
+    {% endif %}
 </div>
 {% endblock %}

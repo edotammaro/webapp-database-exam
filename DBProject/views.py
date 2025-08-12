@@ -3,8 +3,10 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import IntegrityError
 from django.contrib import messages
-from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm, GaraForm
-from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, Specialita
+from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm, GaraForm, IscrizioneGaraForm, \
+    StatoAtletaForm
+from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, \
+    Specialita, Partecipazione
 import time
 
 FALLISMENTI_LOGIN = {}
@@ -93,9 +95,11 @@ def dashboard_view(request):
     if is_atleta(request.user):
         try:
             atleta_obj = Atleta.objects.get(utente=request.user)
+            form_stato = StatoAtletaForm(instance=atleta_obj)
             context = {
                 'atleta': atleta_obj,
                 'tipo_utente': 'ATLETA',
+                'form_stato': form_stato,
             }
             return render(request, 'DBProject/dashboard_atleta.html', context)
         except Atleta.DoesNotExist:
@@ -103,27 +107,11 @@ def dashboard_view(request):
                           "Sei registrato come atleta ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
             return render(request, 'DBProject/dashboard.html', {'tipo_utente': 'ATLETA'})
     elif is_allenatore(request.user):
-        try:
-            allenatore_obj = Allenatore.objects.get(utente=request.user)
-            context = {
-                'allenatore': allenatore_obj,
-                'tipo_utente': 'ALLENATORE',
-            }
-            return render(request, 'DBProject/dashboard_allenatore.html', context)
-        except Allenatore.DoesNotExist:
-            messages.info(request,
-                          "Sei registrato come allenatore ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
-            return render(request, 'DBProject/dashboard.html', {'tipo_utente': 'ALLENATORE'})
+        return redirect('dashboard_allenatore')
     elif is_pres_squadra(request.user):
         return redirect('dashboard_pres_squadra')
     elif is_pres_regione(request.user):
-        presidente = get_object_or_404(PresidenteRegione, utente=request.user)
-        gare_create = Gara.objects.filter(presidente_regione=presidente).order_by('data_inizio')
-        context = {
-            'tipo_utente': 'PRES_REGIONE',
-            'gare': gare_create
-        }
-        return render(request, 'DBProject/dashboard_pres_regione.html', context)
+        return redirect('dashboard_pres_regione')
     return render(request, 'DBProject/dashboard.html')
 
 
@@ -184,11 +172,28 @@ def dashboard_allenatore(request):
     squadra = allenatore.squadra
     atleti_squadra = Atleta.objects.filter(squadra=squadra)
 
+    gare_specialita = GaraSpecialita.objects.all().order_by('id_gara__data_inizio')
+
+    forms_iscrizione = {}
+    iscritti_per_gara = {}
+
+    for gs in gare_specialita:
+        forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
+
+        # Recupera gli iscritti per ogni gara-specialità
+        iscritti_per_gara[gs.pk] = Partecipazione.objects.filter(
+            id_gara=gs.id_gara,
+            id_specialita=gs.id_specialita
+        ).select_related('id_atleta__utente').order_by('id_atleta__utente__username')
+
     context = {
         'allenatore': allenatore,
         'squadra': squadra,
         'atleti_squadra': atleti_squadra,
         'tipo_utente': 'ALLENATORE',
+        'gare_specialita': gare_specialita,
+        'forms_iscrizione': forms_iscrizione,
+        'iscritti_per_gara': iscritti_per_gara,
     }
     return render(request, 'DBProject/dashboard_allenatore.html', context)
 
@@ -258,3 +263,86 @@ def rimuovi_gara_view(request, gara_id):
         messages.success(request, f"La gara a '{gara.luogo}' è stata rimossa con successo.")
 
     return redirect('dashboard')
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_allenatore)
+def iscrivi_atleti_gara(request, gara_specialita_id):
+    if request.method == 'POST':
+        allenatore = get_object_or_404(Allenatore, utente=request.user)
+        gara_specialita = get_object_or_404(GaraSpecialita, pk=gara_specialita_id)
+
+        form = IscrizioneGaraForm(request.POST, gara_specialita=gara_specialita, allenatore=allenatore)
+
+        if form.is_valid():
+            atleti_selezionati = form.cleaned_data['atleti_selezionati']
+
+            iscrizioni_create = 0
+            for atleta in atleti_selezionati:
+                try:
+                    Partecipazione.objects.create(
+                        id_atleta=atleta,
+                        id_gara=gara_specialita.id_gara,
+                        id_specialita=gara_specialita.id_specialita,
+                        stato_iscrizione='ISCRITTO'
+                    )
+                    iscrizioni_create += 1
+                except IntegrityError:
+                    messages.warning(request, f"L'atleta '{atleta.utente.username}' era già iscritto alla gara.")
+
+            if iscrizioni_create > 0:
+                messages.success(request,
+                                 f"Iscrizione di {iscrizioni_create} atleti alla gara completata con successo.")
+        else:
+            messages.error(request, "Errore durante l'iscrizione. Controlla i dati del form.")
+
+    return redirect('dashboard_allenatore')
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_allenatore)
+def rimuovi_iscrizione(request, partecipazione_id):
+    iscrizione = get_object_or_404(Partecipazione, pk=partecipazione_id)
+
+    if iscrizione.id_atleta.squadra.allenatori.filter(utente=request.user).exists():
+        atleta_nome = iscrizione.id_atleta.utente.username
+        iscrizione.delete()
+        messages.success(request, f"L'atleta '{atleta_nome}' è stato rimosso dalla gara con successo.")
+    else:
+        messages.error(request, "Non hai i permessi per rimuovere questa iscrizione.")
+
+    return redirect('dashboard_allenatore')
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_atleta)
+def aggiorna_stato_atleta(request):
+    if request.method == 'POST':
+        atleta = get_object_or_404(Atleta, utente=request.user)
+        form = StatoAtletaForm(request.POST, instance=atleta)
+        if form.is_valid():
+            nuovo_stato = form.cleaned_data['stato']
+            if nuovo_stato == 'INFORTUNATO' and atleta.stato != 'INFORTUNATO':
+                partecipazioni_rimosse = Partecipazione.objects.filter(id_atleta=atleta).delete()
+                if partecipazioni_rimosse[0] > 0:
+                    messages.warning(request,
+                                     f"Sei stato dichiarato infortunato. Sono state rimosse {partecipazioni_rimosse[0]} iscrizioni a gare.")
+
+            form.save()
+            messages.success(request, f"Il tuo stato è stato aggiornato a '{atleta.get_stato_display()}'.")
+        else:
+            messages.error(request, "Errore durante l'aggiornamento del tuo stato.")
+
+    return redirect('dashboard')
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_pres_regione)
+def dashboard_pres_regione(request):
+    presidente = get_object_or_404(PresidenteRegione, utente=request.user)
+    gare_create = Gara.objects.filter(presidente_regione=presidente).order_by('data_inizio')
+    context = {
+        'tipo_utente': 'PRES_REGIONE',
+        'gare': gare_create
+    }
+    return render(request, 'DBProject/dashboard_pres_regione.html', context)

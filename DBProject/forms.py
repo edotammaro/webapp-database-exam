@@ -66,16 +66,11 @@ class StatoAtletaForm(forms.ModelForm):
     class Meta:
         model = Atleta
         fields = ['stato']
-
-
-class StatoAtletaForm(forms.ModelForm):
-    class Meta:
-        model = Atleta
-        fields = ['stato']
         labels = {'stato': 'Stato di Salute'}
         widgets = {
             'stato': forms.Select(attrs={'class': 'form-select'}),
         }
+
 
 class AddAtletaForm(forms.ModelForm):
     utente = forms.ModelChoiceField(
@@ -108,6 +103,7 @@ class AddAllenatoreForm(forms.ModelForm):
             'squadra': forms.HiddenInput(),
         }
 
+
 class GaraForm(forms.ModelForm):
     specialita = forms.ModelMultipleChoiceField(
         queryset=Specialita.objects.all(),
@@ -127,3 +123,25 @@ class GaraForm(forms.ModelForm):
             'luogo': forms.TextInput(attrs={'class': 'form-control'}),
             'data_inizio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
+
+
+class IscrizioneGaraForm(forms.Form):
+    atleti_selezionati = forms.ModelMultipleChoiceField(
+        queryset=Atleta.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="Seleziona gli atleti da iscrivere"
+    )
+
+    def __init__(self, *args, **kwargs):
+        gara_specialita = kwargs.pop('gara_specialita')
+        allenatore = kwargs.pop('allenatore')
+        super().__init__(*args, **kwargs)
+
+        atleti_validi = Atleta.objects.filter(
+            squadra=allenatore.squadra,
+            stato='SANO'
+        ).exclude(
+            partecipazione__id_gara=gara_specialita.id_gara,
+            partecipazione__id_specialita=gara_specialita.id_specialita
+        )
+        self.fields['atleti_selezionati'].queryset = atleti_validi
