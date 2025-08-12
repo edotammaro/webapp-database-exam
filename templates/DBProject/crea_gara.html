@@ -1,0 +1,44 @@
+{% extends 'DBProject/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Crea una Nuova Gara</h2>
+    <form method="post" class="form-horizontal">
+        {% csrf_token %}
+        <div class="form-group row">
+            <label for="{{ form.luogo.id_for_label }}" class="col-sm-2 col-form-label">Luogo:</label>
+            <div class="col-sm-10">
+                {{ form.luogo }}
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="{{ form.data_inizio.id_for_label }}" class="col-sm-2 col-form-label">Data Inizio:</label>
+            <div class="col-sm-10">
+                {{ form.data_inizio }}
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="{{ form.data_fine.id_for_label }}" class="col-sm-2 col-form-label">Data Fine:</label>
+            <div class="col-sm-10">
+                {{ form.data_fine }}
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="{{ form.specialita.id_for_label }}" class="col-sm-2 col-form-label">Specialità:</label>
+            <div class="col-sm-10">
+                {{ form.specialita }}
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="{{ form.sesso.id_for_label }}" class="col-sm-2 col-form-label">Sesso:</label>
+            <div class="col-sm-10">
+                {{ form.sesso }}
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-sm-10 offset-sm-2">
+                <button type="submit" class="btn btn-success">Crea Gara</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

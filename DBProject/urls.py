@@ -6,9 +6,11 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),
     path('login/', views.login_view, name='login'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
-path('dashboard/allenatore/', views.dashboard_allenatore, name='dashboard_allenatore'),
+    path('dashboard/allenatore/', views.dashboard_allenatore, name='dashboard_allenatore'),
     path('dashboard/presidente-squadra/', views.dashboard_pres_squadra, name='dashboard_pres_squadra'),
     path('dashboard/presidente-squadra/rimuovi/<int:membro_id>/<str:tipo_membro>/', views.rimuovi_membro,
          name='rimuovi_membro'),
     path('logout/', views.logout_view, name='logout'),
+    path('crea_gara/', views.crea_gara_view, name='crea_gara'),
+    path('gare/rimuovi/<int:gara_id>/', views.rimuovi_gara_view, name='rimuovi_gara'),
 ]

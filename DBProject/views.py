@@ -3,8 +3,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import connection, IntegrityError
 from django.contrib import messages
-from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm
-from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra
+from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm, GaraForm
+from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, Specialita
 import time
 
 FALLISMENTI_LOGIN = {}
@@ -49,7 +49,7 @@ def login_view(request):
         form = LoginForm(request=request, data=request.POST)
         username = request.POST.get('username')
         MAX_FALLIMENTI = 5
-        LOCKOUT_TIME = 60 # Secondi
+        LOCKOUT_TIME = 60  # Secondi
 
         if username in FALLISMENTI_LOGIN and FALLISMENTI_LOGIN[username]['count'] >= MAX_FALLIMENTI:
             # Controlla se il tempo di blocco è scaduto
@@ -102,7 +102,8 @@ def dashboard_view(request):
             }
             return render(request, 'DBProject/dashboard_atleta.html', context)
         except Atleta.DoesNotExist:
-            messages.info(request, "Sei registrato come atleta ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
+            messages.info(request,
+                          "Sei registrato come atleta ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
             return render(request, 'DBProject/dashboard.html', {'tipo_utente': 'ATLETA'})
     elif is_allenatore(request.user):
         try:
@@ -113,12 +114,20 @@ def dashboard_view(request):
             }
             return render(request, 'DBProject/dashboard_allenatore.html', context)
         except Allenatore.DoesNotExist:
-            messages.info(request, "Sei registrato come allenatore ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
+            messages.info(request,
+                          "Sei registrato come allenatore ma non sei ancora stato assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.")
             return render(request, 'DBProject/dashboard.html', {'tipo_utente': 'ALLENATORE'})
     elif is_pres_squadra(request.user):
         return redirect('dashboard_pres_squadra')
     elif is_pres_regione(request.user):
-        return render(request, 'DBProject/dashboard_pres_regione.html', {'tipo_utente': 'PRES_REGIONE'})
+        presidente = get_object_or_404(PresidenteRegione, utente=request.user)
+        # Ordina le gare per data di inizio
+        gare_create = Gara.objects.filter(presidente_regione=presidente).order_by('data_inizio')
+        context = {
+            'tipo_utente': 'PRES_REGIONE',
+            'gare': gare_create
+        }
+        return render(request, 'DBProject/dashboard_pres_regione.html', context)
     return render(request, 'DBProject/dashboard.html')
 
 
@@ -203,3 +212,51 @@ def rimuovi_membro(request, membro_id, tipo_membro):
         messages.error(request, "Tipo di membro non valido.")
 
     return redirect('dashboard_pres_squadra')
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_pres_regione)
+def crea_gara_view(request):
+    if request.method == 'POST':
+        form = GaraForm(request.POST)
+        if form.is_valid():
+            gara = form.save(commit=False)
+            presidente_regione = get_object_or_404(PresidenteRegione, utente=request.user)
+            gara.presidente_regione = presidente_regione
+            gara.save()
+
+            specialita_selezionate = form.cleaned_data['specialita']
+            sesso_selezionato = form.cleaned_data['sesso']
+
+            for specialita in specialita_selezionate:
+                GaraSpecialita.objects.create(
+                    id_gara=gara,
+                    id_specialita=specialita,
+                    sesso=sesso_selezionato
+                )
+
+            messages.success(request, f"Gara '{gara.luogo}' creata con successo!")
+            return redirect('dashboard')
+    else:
+        form = GaraForm()
+
+    context = {
+        'form': form,
+        'tipo_utente': 'PRES_REGIONE',
+    }
+    return render(request, 'DBProject/crea_gara.html', context)
+
+@login_required(login_url='/login/')
+@user_passes_test(is_pres_regione)
+def rimuovi_gara_view(request, gara_id):
+    gara = get_object_or_404(Gara, pk=gara_id)
+    # Verifica che il presidente di regione che cerca di rimuovere la gara sia lo stesso che l'ha creata
+    if gara.presidente_regione.utente != request.user:
+        messages.error(request, "Non hai il permesso di rimuovere questa gara.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        gara.delete()
+        messages.success(request, f"La gara a '{gara.luogo}' è stata rimossa con successo.")
+
+    return redirect('dashboard')

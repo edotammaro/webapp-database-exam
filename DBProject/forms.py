@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Gara, Partecipazione, Squadra, \
-    Regione
+    Regione, Specialita, GaraSpecialita
 
 
 class RegistrazioneForm(UserCreationForm):
@@ -53,7 +53,6 @@ class RegistrazioneForm(UserCreationForm):
                     PresidenteRegione.objects.create(utente=user, regione=regione)
                 else:
                     raise forms.ValidationError("Il Presidente di Regione deve avere una regione assegnata.")
-            # Rimossa la logica che assegna atleti e allenatori a una squadra di default
 
         return user
 
@@ -88,7 +87,8 @@ class AddAllenatoreForm(forms.ModelForm):
     utente = forms.ModelChoiceField(
         queryset=Utente.objects.filter(tipo='ALLENATORE', allenatore__isnull=True),
         label="Seleziona un allenatore",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=False
     )
 
     class Meta:
@@ -97,4 +97,24 @@ class AddAllenatoreForm(forms.ModelForm):
         widgets = {
             'utente': forms.Select(attrs={'class': 'form-control'}),
             'squadra': forms.HiddenInput(),
+        }
+
+class GaraForm(forms.ModelForm):
+    specialita = forms.ModelMultipleChoiceField(
+        queryset=Specialita.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        label="Seleziona le specialità",
+    )
+    sesso = forms.ChoiceField(
+        choices=GaraSpecialita.sesso_scelte,
+        widget=forms.RadioSelect,
+        label="Seleziona il sesso"
+    )
+
+    class Meta:
+        model = Gara
+        fields = ['luogo', 'data_inizio']
+        widgets = {
+            'luogo': forms.TextInput(attrs={'class': 'form-control'}),
+            'data_inizio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }

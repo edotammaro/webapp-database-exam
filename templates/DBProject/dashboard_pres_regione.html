@@ -4,5 +4,37 @@
     <h2>Dashboard Presidente di Regione</h2>
     <h3>Benvenuto, {{ request.user.username }}</h3>
     <p>In questa dashboard, potrai gestire le gare e le regioni di competenza.</p>
+
+    <div class="mt-4">
+        <a href="{% url 'crea_gara' %}" class="btn btn-primary">Crea Nuova Gara</a>
+    </div>
+
+    <h3 class="mt-5">Gare create</h3>
+    {% if gare %}
+        <ul class="list-group">
+            {% for gara in gare %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ gara.luogo }}</strong>
+                        <br>
+                        Data: {{ gara.data_inizio|date:"d/m/Y" }}
+                        <br>
+                        Specialità:
+                        <ul>
+                            {% for gara_specialita in gara.garaspecialita_set.all %}
+                                <li>{{ gara_specialita.id_specialita.nome }} ({{ gara_specialita.get_sesso_display }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <form action="{% url 'rimuovi_gara' gara.id %}" method="post" onsubmit="return confirm('Sei sicuro di voler rimuovere questa gara?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Rimuovi</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Non hai ancora creato nessuna gara.</p>
+    {% endif %}
 </div>
 {% endblock %}

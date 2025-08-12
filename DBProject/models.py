@@ -114,7 +114,7 @@ class Gara(models.Model):
     presidente_regione = models.ForeignKey(PresidenteRegione, on_delete=models.CASCADE)
     luogo = models.CharField(max_length=200)
     data_inizio = models.DateField()
-    data_fine = models.DateField()
+
 
     def __str__(self):
         return f"Gara a {self.luogo} ({self.data_inizio})"
