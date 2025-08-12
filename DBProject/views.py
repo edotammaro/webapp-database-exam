@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db import connection, IntegrityError
+from django.db import IntegrityError
 from django.contrib import messages
 from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm, GaraForm
 from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, Specialita
@@ -52,13 +52,11 @@ def login_view(request):
         LOCKOUT_TIME = 60  # Secondi
 
         if username in FALLISMENTI_LOGIN and FALLISMENTI_LOGIN[username]['count'] >= MAX_FALLIMENTI:
-            # Controlla se il tempo di blocco è scaduto
             if time.time() - FALLISMENTI_LOGIN[username]['time'] < LOCKOUT_TIME:
                 remaining_time = int(LOCKOUT_TIME - (time.time() - FALLISMENTI_LOGIN[username]['time']))
                 messages.error(request, f"Troppi tentativi di accesso falliti. Riprova tra {remaining_time} secondi.")
                 return render(request, 'DBProject/login.html', {'form': form})
             else:
-                # Resetta il contatore se il tempo di blocco è scaduto
                 FALLISMENTI_LOGIN.pop(username)
 
         if form.is_valid():
@@ -69,7 +67,6 @@ def login_view(request):
                     FALLISMENTI_LOGIN.pop(username)
                 return redirect('dashboard')
             else:
-                # Incrementa il contatore dei fallimenti
                 if username not in FALLISMENTI_LOGIN:
                     FALLISMENTI_LOGIN[username] = {'count': 1, 'time': time.time()}
                 else:
@@ -121,7 +118,6 @@ def dashboard_view(request):
         return redirect('dashboard_pres_squadra')
     elif is_pres_regione(request.user):
         presidente = get_object_or_404(PresidenteRegione, utente=request.user)
-        # Ordina le gare per data di inizio
         gare_create = Gara.objects.filter(presidente_regione=presidente).order_by('data_inizio')
         context = {
             'tipo_utente': 'PRES_REGIONE',
@@ -138,6 +134,7 @@ def dashboard_pres_squadra(request):
     squadra = presidente.squadra
     allenatori = squadra.allenatori.all()
     atleti = squadra.atleti.all()
+    gare = Gara.objects.all().order_by('data_inizio')
 
     add_atleta_form = AddAtletaForm(initial={'squadra': squadra.pk})
     add_allenatore_form = AddAllenatoreForm(initial={'squadra': squadra.pk})
@@ -175,6 +172,7 @@ def dashboard_pres_squadra(request):
         'add_atleta_form': add_atleta_form,
         'add_allenatore_form': add_allenatore_form,
         'tipo_utente': 'PRES_SQUADRA',
+        'gare': gare,
     }
     return render(request, 'DBProject/dashboard_pres_squadra.html', context)
 
@@ -201,11 +199,11 @@ def rimuovi_membro(request, membro_id, tipo_membro):
     squadra_utente = request.user.presidentesquadra.squadra
 
     if tipo_membro == 'atleta':
-        membro = get_object_or_404(Atleta, id=membro_id, squadra=squadra_utente)
+        membro = get_object_or_404(Atleta, pk=membro_id, squadra=squadra_utente)
         membro.delete()
         messages.success(request, f"L'atleta '{membro.utente.username}' è stato rimosso dalla squadra.")
     elif tipo_membro == 'allenatore':
-        membro = get_object_or_404(Allenatore, id=membro_id, squadra=squadra_utente)
+        membro = get_object_or_404(Allenatore, pk=membro_id, squadra=squadra_utente)
         membro.delete()
         messages.success(request, f"L'allenatore '{membro.utente.username}' è stato rimosso dalla squadra.")
     else:
@@ -246,11 +244,11 @@ def crea_gara_view(request):
     }
     return render(request, 'DBProject/crea_gara.html', context)
 
+
 @login_required(login_url='/login/')
 @user_passes_test(is_pres_regione)
 def rimuovi_gara_view(request, gara_id):
     gara = get_object_or_404(Gara, pk=gara_id)
-    # Verifica che il presidente di regione che cerca di rimuovere la gara sia lo stesso che l'ha creata
     if gara.presidente_regione.utente != request.user:
         messages.error(request, "Non hai il permesso di rimuovere questa gara.")
         return redirect('dashboard')

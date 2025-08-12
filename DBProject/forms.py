@@ -68,6 +68,15 @@ class StatoAtletaForm(forms.ModelForm):
         fields = ['stato']
 
 
+class StatoAtletaForm(forms.ModelForm):
+    class Meta:
+        model = Atleta
+        fields = ['stato']
+        labels = {'stato': 'Stato di Salute'}
+        widgets = {
+            'stato': forms.Select(attrs={'class': 'form-select'}),
+        }
+
 class AddAtletaForm(forms.ModelForm):
     utente = forms.ModelChoiceField(
         queryset=Utente.objects.filter(tipo='ATLETA', atleta__isnull=True),
