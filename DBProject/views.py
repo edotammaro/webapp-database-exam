@@ -1,12 +1,10 @@
-# views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import IntegrityError
 from django.contrib import messages
 from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreForm, GaraForm, IscrizioneGaraForm, \
-    StatoAtletaForm
+    StatoAtletaForm, RisultatoForm
 from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, \
     Specialita, Partecipazione
 import time
@@ -370,3 +368,32 @@ def dashboard_pres_regione(request):
         'gare': gare_create
     }
     return render(request, 'DBProject/dashboard_pres_regione.html', context)
+
+
+@login_required(login_url='/login/')
+@user_passes_test(is_allenatore)
+def inserisci_risultato_view(request, partecipazione_id):
+    partecipazione = get_object_or_404(Partecipazione, pk=partecipazione_id)
+    allenatore = get_object_or_404(Allenatore, utente=request.user)
+
+    # Verifica che l'allenatore sia della squadra dell'atleta
+    if partecipazione.id_atleta.squadra != allenatore.squadra:
+        messages.error(request, "Non hai i permessi per inserire i risultati per questo atleta.")
+        return redirect('dashboard_allenatore')
+
+    if request.method == 'POST':
+        form = RisultatoForm(request.POST, instance=partecipazione)
+        if form.is_valid():
+            form.save()
+            messages.success(request,
+                             f"Risultato per l'atleta '{partecipazione.id_atleta.utente.username}' inserito con successo!")
+            return redirect('dashboard_allenatore')
+    else:
+        form = RisultatoForm(instance=partecipazione)
+
+    context = {
+        'form': form,
+        'partecipazione': partecipazione,
+        'tipo_utente': 'ALLENATORE',
+    }
+    return render(request, 'DBProject/inserisci_risultato.html', context)

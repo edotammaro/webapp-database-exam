@@ -147,3 +147,17 @@ class IscrizioneGaraForm(forms.Form):
             partecipazione__id_specialita=gara_specialita.id_specialita
         )
         self.fields['atleti_selezionati'].queryset = atleti_validi
+
+
+class RisultatoForm(forms.ModelForm):
+    class Meta:
+        model = Partecipazione
+        fields = ['risultato', 'stato_iscrizione']
+        labels = {
+            'risultato': 'Risultato (es. 00:01:23.45)',
+            'stato_iscrizione': 'Stato',
+        }
+        widgets = {
+            'risultato': forms.TextInput(attrs={'class': 'form-control'}),
+            'stato_iscrizione': forms.Select(attrs={'class': 'form-select'}),
+        }
