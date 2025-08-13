@@ -1,4 +1,4 @@
-{% extends 'DBProject/../DBProject/base.html' %}
+{% extends 'DBProject/base.html' %}
 
 {% block content %}
 <div class="container mt-5">
@@ -35,14 +35,8 @@
             <tr>
                 <td>{{ iscrizione.id_gara.luogo }} ({{ iscrizione.id_gara.data_inizio|date:"d M Y" }})</td>
                 <td>{{ iscrizione.id_specialita.nome }}</td>
-                <td><span class="badge text-bg-info">{{ iscrizione.get_stato_iscrizione_display }}</span></td>
-                <td>
-                    {% if iscrizione.risultato %}
-                        {{ iscrizione.risultato }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </td>
+                <td>{{ iscrizione.get_stato_iscrizione_display }}</td>
+                <td>{{ iscrizione.risultato|default:"N/A" }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -61,24 +55,24 @@
                 <th>Data</th>
                 <th>Iscrizione</th>
             </tr>
-        </thead>
-        <tbody>
-            {% for gara_specialita in gare_specialita %}
-            <tr>
-                <td>{{ gara_specialita.id_gara.luogo }}</td>
-                <td>{{ gara_specialita.id_specialita.nome }}</td>
-                <td>{{ gara_specialita.sesso }}</td>
-                <td>{{ gara_specialita.id_gara.data_inizio }}</td>
-                <td>
-                    {% if gara_specialita.id_gara.pk|stringformat:"s"|add:"-"|add:gara_specialita.id_specialita.pk|add:"-"|add:gara_specialita.sesso in gare_iscritte_ids %}
-                        <span class="text-success">✔️ Iscritto</span>
-                    {% else %}
-                        <span class="text-danger">❌ Non Iscritto</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+</thead>
+<tbody>
+    {% for item in calendario_con_stato %}
+    <tr>
+        <td>{{ item.gara_specialita.id_gara.luogo }}</td>
+        <td>{{ item.gara_specialita.id_specialita.nome }}</td>
+        <td>{{ item.gara_specialita.sesso }}</td>
+        <td>{{ item.gara_specialita.id_gara.data_inizio }}</td>
+        <td>
+            {% if item.is_iscritto %}
+                <span class="text-success">✔️ Iscritto</span>
+            {% else %}
+                <span class="text-danger">❌ Non Iscritto</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
 </div>
 {% endblock %}

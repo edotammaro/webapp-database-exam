@@ -1,3 +1,5 @@
+# views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -36,12 +38,8 @@ def register_view(request):
     if request.method == "POST":
         form = RegistrazioneForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.nome = form.cleaned_data['nome']
-            user.cognome = form.cleaned_data['cognome']
-            user.data_nascita = form.cleaned_data['data_nascita']
-            user.save()
-            messages.success(request, f"Utente '{user.username}' registrato con successo!")
+            form.save()
+            messages.success(request, "Utente registrato con successo!")
             return redirect('login')
         else:
             messages.error(request, "Errore nella registrazione. Controlla i dati inseriti.")
@@ -103,23 +101,30 @@ def dashboard_view(request):
 
             # Funzionalità 1: Calendario Gare completo con stato di iscrizione
             gare_specialita = GaraSpecialita.objects.all().order_by('id_gara__data_inizio')
-            partecipazioni_atleta = Partecipazione.objects.filter(id_atleta=atleta_obj).values_list('id_gara',
-                                                                                                    'id_specialita')
-            gare_iscritte_ids = {f"{p[0]}-{p[1]}" for p in partecipazioni_atleta}
 
             # Funzionalità 2, 3 e 4: Visualizzazione delle iscrizioni attuali e dei risultati
-            # Recuperiamo tutte le partecipazioni dell'atleta, pre-caricando i dati di Gara e Specialita
             iscrizioni_atleta = Partecipazione.objects.filter(id_atleta=atleta_obj).select_related(
                 'id_gara', 'id_specialita'
             ).order_by('-id_gara__data_inizio')
+
+            # Prepara i dati del calendario in modo più efficiente per il template
+            calendario_con_stato = []
+            for gara_spec in gare_specialita:
+                is_iscritto = iscrizioni_atleta.filter(
+                    id_gara=gara_spec.id_gara,
+                    id_specialita=gara_spec.id_specialita
+                ).exists()
+                calendario_con_stato.append({
+                    'gara_specialita': gara_spec,
+                    'is_iscritto': is_iscritto
+                })
 
             context = {
                 'atleta': atleta_obj,
                 'tipo_utente': 'ATLETA',
                 'form_stato': form_stato,
-                'gare_specialita': gare_specialita,
-                'gare_iscritte_ids': gare_iscritte_ids,
-                'iscrizioni_atleta': iscrizioni_atleta,  # Aggiunto il nuovo contesto
+                'iscrizioni_atleta': iscrizioni_atleta,
+                'calendario_con_stato': calendario_con_stato,
             }
             return render(request, 'DBProject/dashboard_atleta.html', context)
         except Atleta.DoesNotExist:
