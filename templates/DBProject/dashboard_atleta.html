@@ -1,25 +1,84 @@
-{% extends 'DBProject/base.html' %}
-{% load app_filters %}
+{% extends 'DBProject/../DBProject/base.html' %}
 
 {% block content %}
 <div class="container mt-5">
     <h2>Dashboard Atleta</h2>
-    <h3>Benvenuto, {{ request.user.username }}</h3>
-    {% if atleta %}
-        <p>Fai parte della squadra: {{ atleta.squadra.nome }}</p>
+    <div class="card my-4">
+        <div class="card-header">
+            Profilo Atleta
+        </div>
+        <div class="card-body">
+            <p><strong>Nome Utente:</strong> {{ atleta.utente.username }}</p>
+            <p><strong>Stato attuale:</strong> {{ atleta.get_stato_display }}</p>
 
-        <div class="card p-4 mt-4">
-            <h4>Aggiorna il tuo stato di salute</h4>
-            <p>Stato attuale: <strong>{{ atleta.get_stato_display }}</strong></p>
-            <form action="{% url 'aggiorna_stato_atleta' %}" method="post">
+            <form method="post" action="{% url 'aggiorna_stato_atleta' %}">
                 {% csrf_token %}
                 {{ form_stato.as_p }}
                 <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
             </form>
         </div>
+    </div>
 
+    <h3 class="mt-5">Le mie Iscrizioni e Risultati</h3>
+    {% if iscrizioni_atleta %}
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Gara</th>
+                <th>Specialità</th>
+                <th>Stato Iscrizione</th>
+                <th>Risultato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for iscrizione in iscrizioni_atleta %}
+            <tr>
+                <td>{{ iscrizione.id_gara.luogo }} ({{ iscrizione.id_gara.data_inizio|date:"d M Y" }})</td>
+                <td>{{ iscrizione.id_specialita.nome }}</td>
+                <td><span class="badge text-bg-info">{{ iscrizione.get_stato_iscrizione_display }}</span></td>
+                <td>
+                    {% if iscrizione.risultato %}
+                        {{ iscrizione.risultato }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>Non sei ancora assegnato a una squadra. Attendi che il presidente di una squadra ti aggiunga.</p>
+    <div class="alert alert-info">Non sei iscritto a nessuna gara.</div>
     {% endif %}
+
+    <h3 class="mt-5">Calendario Gare</h3>
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Gara</th>
+                <th>Specialità</th>
+                <th>Sesso</th>
+                <th>Data</th>
+                <th>Iscrizione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gara_specialita in gare_specialita %}
+            <tr>
+                <td>{{ gara_specialita.id_gara.luogo }}</td>
+                <td>{{ gara_specialita.id_specialita.nome }}</td>
+                <td>{{ gara_specialita.sesso }}</td>
+                <td>{{ gara_specialita.id_gara.data_inizio }}</td>
+                <td>
+                    {% if gara_specialita.id_gara.pk|stringformat:"s"|add:"-"|add:gara_specialita.id_specialita.pk|add:"-"|add:gara_specialita.sesso in gare_iscritte_ids %}
+                        <span class="text-success">✔️ Iscritto</span>
+                    {% else %}
+                        <span class="text-danger">❌ Non Iscritto</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

@@ -100,10 +100,26 @@ def dashboard_view(request):
         try:
             atleta_obj = Atleta.objects.get(utente=request.user)
             form_stato = StatoAtletaForm(instance=atleta_obj)
+
+            # Funzionalità 1: Calendario Gare completo con stato di iscrizione
+            gare_specialita = GaraSpecialita.objects.all().order_by('id_gara__data_inizio')
+            partecipazioni_atleta = Partecipazione.objects.filter(id_atleta=atleta_obj).values_list('id_gara',
+                                                                                                    'id_specialita')
+            gare_iscritte_ids = {f"{p[0]}-{p[1]}" for p in partecipazioni_atleta}
+
+            # Funzionalità 2, 3 e 4: Visualizzazione delle iscrizioni attuali e dei risultati
+            # Recuperiamo tutte le partecipazioni dell'atleta, pre-caricando i dati di Gara e Specialita
+            iscrizioni_atleta = Partecipazione.objects.filter(id_atleta=atleta_obj).select_related(
+                'id_gara', 'id_specialita'
+            ).order_by('-id_gara__data_inizio')
+
             context = {
                 'atleta': atleta_obj,
                 'tipo_utente': 'ATLETA',
                 'form_stato': form_stato,
+                'gare_specialita': gare_specialita,
+                'gare_iscritte_ids': gare_iscritte_ids,
+                'iscrizioni_atleta': iscrizioni_atleta,  # Aggiunto il nuovo contesto
             }
             return render(request, 'DBProject/dashboard_atleta.html', context)
         except Atleta.DoesNotExist:
@@ -329,7 +345,7 @@ def aggiorna_stato_atleta(request):
                 partecipazioni_rimosse = Partecipazione.objects.filter(id_atleta=atleta).delete()
                 if partecipazioni_rimosse[0] > 0:
                     messages.warning(request,
-                                     f"Sei stato dichiarato infortunato. Sono state rimosse {partecipazioni[0]} iscrizioni a gare.")
+                                     f"Sei stato dichiarato infortunato. Sono state rimosse {partecipazioni_rimosse[0]} iscrizioni a gare.")
 
             form.save()
             messages.success(request, f"Il tuo stato è stato aggiornato a '{atleta.get_stato_display()}'.")
