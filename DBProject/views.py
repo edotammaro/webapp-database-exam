@@ -9,8 +9,6 @@ from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteReg
     Specialita, Partecipazione
 import time
 
-FALLISMENTI_LOGIN = {}
-
 
 def is_atleta(user):
     return user.is_authenticated and user.tipo == 'ATLETA'
@@ -46,43 +44,59 @@ def register_view(request):
     return render(request, 'DBProject/register.html', {'form': form})
 
 
+# Dizionario per tenere traccia dei tentativi di login falliti
+FALLISMENTI_LOGIN = {}
+# Numero massimo di tentativi prima del blocco
+MAX_TENTATIVI = 5
+# Tempo di blocco in secondi (es. 5 minuti)
+LOCKOUT_TIME = 5 * 60
+
+
 def login_view(request):
-    if request.method == "POST":
-        form = LoginForm(request=request, data=request.POST)
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
         username = request.POST.get('username')
-        MAX_FALLIMENTI = 5
-        LOCKOUT_TIME = 60  # Secondi
 
-        if username in FALLISMENTI_LOGIN and FALLISMENTI_LOGIN[username]['count'] >= MAX_FALLIMENTI:
-            if time.time() - FALLISMENTI_LOGIN[username]['time'] < LOCKOUT_TIME:
-                remaining_time = int(LOCKOUT_TIME - (time.time() - FALLISMENTI_LOGIN[username]['time']))
-                messages.error(request, f"Troppi tentativi di accesso falliti. Riprova tra {remaining_time} secondi.")
+        # 1. Controllo immediato del blocco, prima di ogni altra operazione
+        now = time.time()
+        if username and username in FALLISMENTI_LOGIN:
+            tentativi_falliti, ultimo_tentativo = FALLISMENTI_LOGIN[username]
+            if tentativi_falliti >= MAX_TENTATIVI and (now - ultimo_tentativo) < LOCKOUT_TIME:
+                remaining_time = int(LOCKOUT_TIME - (now - ultimo_tentativo))
+                messages.error(request,
+                               f"Troppi tentativi falliti per l'utente '{username}'. Riprova tra {remaining_time} secondi.")
                 return render(request, 'DBProject/login.html', {'form': form})
-            else:
-                FALLISMENTI_LOGIN.pop(username)
 
+        # 2. Se l'utente non è bloccato, processiamo il form
         if form.is_valid():
-            user = form.get_user()
+            user = authenticate(request, username=username, password=form.cleaned_data['password'])
+
             if user is not None:
                 login(request, user)
+                # Resetta il contatore in caso di successo
                 if username in FALLISMENTI_LOGIN:
-                    FALLISMENTI_LOGIN.pop(username)
+                    del FALLISMENTI_LOGIN[username]
+                messages.success(request, f"Benvenuto, {username}!")
                 return redirect('dashboard')
             else:
+                # 3. Logghiamo il fallimento dell'autenticazione
                 if username not in FALLISMENTI_LOGIN:
-                    FALLISMENTI_LOGIN[username] = {'count': 1, 'time': time.time()}
-                else:
-                    FALLISMENTI_LOGIN[username]['count'] += 1
-                    FALLISMENTI_LOGIN[username]['time'] = time.time()
-
-                messages.error(request, "Credenziali non valide. Riprova.")
+                    FALLISMENTI_LOGIN[username] = [0, now]
+                FALLISMENTI_LOGIN[username][0] += 1
+                FALLISMENTI_LOGIN[username][1] = now
+                messages.error(request, 'Username o password non validi.')
         else:
-            messages.error(request, "Credenziali non valide. Riprova.")
+            # 4. In caso di form non valido, logghiamo comunque il tentativo
+            if username:
+                if username not in FALLISMENTI_LOGIN:
+                    FALLISMENTI_LOGIN[username] = [0, now]
+                FALLISMENTI_LOGIN[username][0] += 1
+                FALLISMENTI_LOGIN[username][1] = now
+            messages.error(request, 'Credenziali non valide. Riprova.')
     else:
         form = LoginForm()
 
     return render(request, 'DBProject/login.html', {'form': form})
-
 
 @login_required(login_url='/login/')
 def logout_view(request):
