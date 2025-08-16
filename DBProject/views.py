@@ -54,22 +54,22 @@ LOCKOUT_TIME = 5 * 60
 
 def login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request.POST)
+        # Istanzia il form correttamente, passando request e data
+        form = LoginForm(request=request, data=request.POST)
         username = request.POST.get('username')
 
-        # 1. Controllo immediato del blocco, prima di ogni altra operazione
+        # Controllo immediato del blocco, prima di ogni altra operazione
         now = time.time()
         if username and username in FALLISMENTI_LOGIN:
             tentativi_falliti, ultimo_tentativo = FALLISMENTI_LOGIN[username]
             if tentativi_falliti >= MAX_TENTATIVI and (now - ultimo_tentativo) < LOCKOUT_TIME:
                 remaining_time = int(LOCKOUT_TIME - (now - ultimo_tentativo))
-                messages.error(request,
-                               f"Troppi tentativi falliti per l'utente '{username}'. Riprova tra {remaining_time} secondi.")
+                messages.error(request, f"Troppi tentativi falliti per l'utente '{username}'. Riprova tra {remaining_time} secondi.")
                 return render(request, 'DBProject/login.html', {'form': form})
 
-        # 2. Se l'utente non è bloccato, processiamo il form
+        # Processiamo il form
         if form.is_valid():
-            user = authenticate(request, username=username, password=form.cleaned_data['password'])
+            user = form.get_user() # Usa form.get_user() che gestisce già l'autenticazione
 
             if user is not None:
                 login(request, user)
@@ -79,14 +79,11 @@ def login_view(request):
                 messages.success(request, f"Benvenuto, {username}!")
                 return redirect('dashboard')
             else:
-                # 3. Logghiamo il fallimento dell'autenticazione
-                if username not in FALLISMENTI_LOGIN:
-                    FALLISMENTI_LOGIN[username] = [0, now]
-                FALLISMENTI_LOGIN[username][0] += 1
-                FALLISMENTI_LOGIN[username][1] = now
+                # Questo blocco non dovrebbe mai essere raggiunto se form.is_valid() è vero
+                # ma lo manteniamo per sicurezza.
                 messages.error(request, 'Username o password non validi.')
         else:
-            # 4. In caso di form non valido, logghiamo comunque il tentativo
+            # Qui il form è invalido (es. username/password vuoti)
             if username:
                 if username not in FALLISMENTI_LOGIN:
                     FALLISMENTI_LOGIN[username] = [0, now]
