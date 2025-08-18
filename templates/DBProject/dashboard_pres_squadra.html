@@ -1,5 +1,8 @@
 {% extends 'DBProject/base.html' %}
 
+{% load custom_filters %}
+
+
 {% block content %}
 <div class="container mt-5">
     <h2>Dashboard Presidente di Squadra</h2>
@@ -75,28 +78,58 @@
     </div>
 
 
-    <h3 class="mt-5">Gare disponibili</h3>
-    {% if gare %}
-    <ul class="list-group">
-        {% for gara in gare %}
-        <li class="list-group-item">
-            <div>
-                <strong>Luogo:</strong> {{ gara.luogo }}
-                <br>
-                <strong>Data:</strong> {{ gara.data_inizio|date:"d/m/Y" }}
-                <br>
-                <strong>Specialità:</strong>
-                <ul>
-                    {% for gara_specialita in gara.garaspecialita_set.all %}
-                        <li>{{ gara_specialita.id_specialita.nome }} ({{ gara_specialita.get_sesso_display }})</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
+   <div class="mt-5">
+    <h4>Gare Disponibili</h4>
+    {% if gare_future %}
+        <ul class="list-group">
+            {% for gara in gare_future %}
+                <li class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Gara a {{ gara.luogo }}</h5>
+                        <small>{{ gara.data_inizio|date:"d M Y" }}</small>
+                    </div>
+                    <p class="mb-1"><strong>Data Fine:</strong> {{ gara.data_fine|date:"d M Y" }}</p>
+
+                    <div class="mt-3">
+                        <h6>Specialità:</h6>
+                        <ul>
+                            {% for specialita in specialita_per_gara|get_item:gara.pk %}
+                                <li>
+                                    {{ specialita.id_specialita.nome }} - Sesso: {{ specialita.get_sesso_display }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
     {% else %}
-    <p>Non ci sono gare disponibili.</p>
+        <p>Non ci sono gare future in programma.</p>
     {% endif %}
 </div>
+
+<div class="mt-5">
+    <h4>Gare Passate</h4>
+    {% if gare_passate %}
+        <ul class="list-group">
+            {% for gara in gare_passate %}
+                <li class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Gara a {{ gara.luogo }}</h5>
+                        <small>{{ gara.data_fine|date:"d M Y" }}</small>
+                    </div>
+                    <p class="mb-1"><strong>Specialità:</strong></p>
+                    <ul>{% for specialita in specialita_per_gara|get_item:gara.pk %}
+                            <li>{{ specialita.id_specialita.nome }} - Sesso: {{ specialita.get_sesso_display }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Non ci sono gare passate.</p>
+    {% endif %}
+</div>
+
+
 {% endblock %}

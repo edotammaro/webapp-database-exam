@@ -154,16 +154,27 @@ def dashboard_view(request):
 @login_required(login_url='/login/')
 @user_passes_test(is_pres_squadra)
 def dashboard_pres_squadra(request):
+    # Retrieve the president and their associated team
     presidente = get_object_or_404(PresidenteSquadra, utente=request.user)
     squadra = presidente.squadra
     allenatori = squadra.allenatori.all()
     atleti = squadra.atleti.all()
-    gare = Gara.objects.all().order_by('data_inizio')
 
+    # Fetch future and past competitions
+    gare_future = Gara.objects.filter(data_inizio__gte=now()).order_by('data_inizio')
+    gare_passate = Gara.objects.filter(data_fine__lt=now()).order_by('-data_fine')
+
+    # Populate specialita_per_gara
+    specialita_per_gara = {
+        gara.pk: GaraSpecialita.objects.filter(id_gara=gara) for gara in gare_future
+    }
+
+    # Initialize forms for adding athletes and coaches
     add_atleta_form = AddAtletaForm(initial={'squadra': squadra.pk})
     add_allenatore_form = AddAllenatoreForm(initial={'squadra': squadra.pk})
 
     if request.method == 'POST':
+        # Handle adding an athlete
         if 'add_atleta' in request.POST:
             add_atleta_form = AddAtletaForm(request.POST)
             if add_atleta_form.is_valid():
@@ -174,8 +185,11 @@ def dashboard_pres_squadra(request):
                     messages.success(request, f"Atleta '{atleta.utente.username}' aggiunto con successo.")
                 except IntegrityError:
                     messages.error(request, "Questo utente è già un atleta e non può essere aggiunto nuovamente.")
-                return redirect('dashboard_pres_squadra')
+            else:
+                messages.error(request, "Errore nel form per aggiungere un atleta.")
+            return redirect('dashboard_pres_squadra')
 
+        # Handle adding a coach
         if 'add_allenatore' in request.POST:
             add_allenatore_form = AddAllenatoreForm(request.POST)
             if add_allenatore_form.is_valid():
@@ -186,17 +200,22 @@ def dashboard_pres_squadra(request):
                     messages.success(request, f"Allenatore '{allenatore.utente.username}' aggiunto con successo.")
                 except IntegrityError:
                     messages.error(request, "Questo utente è già un allenatore e non può essere aggiunto nuovamente.")
-                return redirect('dashboard_pres_squadra')
+            else:
+                messages.error(request, "Errore nel form per aggiungere un allenatore.")
+            return redirect('dashboard_pres_squadra')
 
+    # Prepare the context for rendering the template
     context = {
         'presidente': presidente,
         'squadra': squadra,
         'allenatori': allenatori,
         'atleti': atleti,
+        'gare_future': gare_future,
+        'gare_passate': gare_passate,
+        'specialita_per_gara': specialita_per_gara,
         'add_atleta_form': add_atleta_form,
         'add_allenatore_form': add_allenatore_form,
         'tipo_utente': 'PRES_SQUADRA',
-        'gare': gare,
     }
     return render(request, 'DBProject/dashboard_pres_squadra.html', context)
 
@@ -215,7 +234,7 @@ def dashboard_allenatore(request):
 
     forms_iscrizione = {}
     iscritti_per_gara = {}
-    specialita_per_gara = {}
+    specialita_per_gara = {gara.pk: gara.garaspecialita_set.all() for gara in gare_future}
 
     for gara in gare_future:
         gare_specialita = GaraSpecialita.objects.filter(id_gara=gara)
