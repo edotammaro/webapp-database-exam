@@ -409,13 +409,22 @@ def aggiorna_stato_atleta(request):
 @user_passes_test(is_pres_regione)
 def dashboard_pres_regione(request):
     presidente = get_object_or_404(PresidenteRegione, utente=request.user)
-    gare_create = Gara.objects.filter(presidente_regione=presidente).order_by('data_inizio')
+    gare_future = Gara.objects.filter(data_fine__gte=now()).order_by('data_inizio')
+    gare_passate = Gara.objects.filter(data_fine__lt=now()).order_by('data_fine')
+
+    specialita_per_gara = {}
+    for gara in gare_future:
+        specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
+    for gara in gare_passate:
+        specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
+
     context = {
         'tipo_utente': 'PRES_REGIONE',
-        'gare': gare_create
+        'gare_future': gare_future,
+        'gare_passate': gare_passate,
+        'specialita_per_gara': specialita_per_gara
     }
     return render(request, 'DBProject/dashboard_pres_regione.html', context)
-
 
 @login_required(login_url='/login/')
 @user_passes_test(is_allenatore)
