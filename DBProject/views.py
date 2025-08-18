@@ -409,19 +409,19 @@ def aggiorna_stato_atleta(request):
 @user_passes_test(is_pres_regione)
 def dashboard_pres_regione(request):
     presidente = get_object_or_404(PresidenteRegione, utente=request.user)
-    gare_future = Gara.objects.filter(data_fine__gte=now()).order_by('data_inizio')
-    gare_passate = Gara.objects.filter(data_fine__lt=now()).order_by('data_fine')
+
+    # Filtra le gare in base al presidente di regione
+    gare_future = Gara.objects.filter(data_fine__gte=now(), presidente_regione=presidente).order_by('data_inizio')
+    gare_passate = Gara.objects.filter(data_fine__lt=now(), presidente_regione=presidente).order_by('data_fine')
 
     specialita_per_gara = {}
     iscritti_per_gara_futura = {}
 
     for gara in gare_future:
         specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
-        # Recupera tutti gli iscritti per ogni gara futura
         iscritti_per_gara_futura[gara.pk] = Partecipazione.objects.filter(id_gara=gara).select_related(
             'id_atleta__utente', 'id_specialita').order_by('id_atleta__utente__username')
 
-    # Nuova sezione per gestire i risultati delle gare passate
     risultati_per_gara_passata = {}
     for gara in gare_passate:
         specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
