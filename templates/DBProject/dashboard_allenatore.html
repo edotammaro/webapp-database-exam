@@ -1,3 +1,4 @@
+
 {% extends 'DBProject/base.html' %}
 {% load app_filters %}
 
@@ -27,64 +28,62 @@
         </ul>
     </div>
 
-    <div class="mt-5">
-        <h4>Calendario Gare e Iscrizioni</h4>
-        {% if gare_specialita %}
-            <ul class="list-group">
-                {% for gs in gare_specialita %}
-                    <li class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">Gara a {{ gs.id_gara.luogo }}</h5>
-                            <small>{{ gs.id_gara.data_inizio }}</small>
-                        </div>
-                        <p class="mb-1"><strong>Specialità:</strong> {{ gs.id_specialita.nome }} ({{ gs.sesso }})</p>
+<div class="mt-5">
+    <h4>Gare Future</h4>
+    {% if gare_future %}
+        <ul class="list-group">
+            {% for gara in gare_future %}
+                <li class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Gara a {{ gara.luogo }}</h5>
+                        <small>{{ gara.data_inizio|date:"d M Y" }}</small>
+                    </div>
+                    <p class="mb-1"><strong>Data Fine:</strong> {{ gara.data_fine|date:"d M Y" }}</p>
 
-                        <div class="mt-3">
-                            <h6>Iscrivi Atleti:</h6>
-                            <form action="{% url 'iscrivi_atleti_gara' gs.pk %}" method="post">
-                                {% csrf_token %}
-                                {{ forms_iscrizione|get_item:gs.pk }}
-                                <button type="submit" class="btn btn-primary btn-sm mt-2">Iscrivi</button>
-                            </form>
-                        </div>
+                    <div class="mt-3">
+                        <h6>Specialità:</h6>
+                        <ul>
+                            {% for specialita in specialita_per_gara|get_item:gara.pk %}
+                                <li>
+                                    {{ specialita.id_specialita.nome }} - Sesso: {{ specialita.get_sesso_display }}
+                                    <form action="{% url 'iscrivi_atleti_gara' specialita.pk %}" method="post" class="mt-2">
+                                        {% csrf_token %}
+                                        {{ forms_iscrizione|get_item:specialita.pk }}
+                                        <button type="submit" class="btn btn-primary btn-sm" aria-label="Iscrivi Atleti">Iscrivi</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Non ci sono gare future in programma.</p>
+    {% endif %}
+</div>
 
-                        <div class="mt-4">
-                            <h6>Atleti iscritti:</h6>
-                            {% with iscritti_lista=iscritti_per_gara|get_item:gs.pk %}
-                            {% if iscritti_lista %}
-                            <ul class="list-group">
-                                {% for partecipazione in iscritti_lista %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ partecipazione.id_atleta.utente.username }}</strong>
-                                            <br>
-                                            <small>Stato: {{ partecipazione.get_stato_iscrizione_display }}</small>
-                                            <br>
-                                            <small>Risultato: {{ partecipazione.risultato|default:"N/A" }}</small>
-                                        </div>
-                                        <div class="btn-group" role="group">
-                                            {% if partecipazione.stato_iscrizione == 'ISCRITTO' %}
-                                            <a href="{% url 'inserisci_risultato' partecipazione.pk %}" class="btn btn-sm btn-success">Inserisci Risultato</a>
-                                            {% endif %}
-                                            <form action="{% url 'rimuovi_iscrizione' partecipazione.pk %}" method="post" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger btn-sm">Rimuovi</button>
-                                            </form>
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                                <p>Nessun atleta iscritto a questa gara.</p>
-                            {% endif %}
-                            {% endwith %}
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>Non ci sono gare in programma.</p>
-        {% endif %}
-    </div>
+<div class="mt-5">
+    <h4>Gare Passate</h4>
+    {% if gare_passate %}
+        <ul class="list-group">
+            {% for gara in gare_passate %}
+                <li class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Gara a {{ gara.luogo }}</h5>
+                        <small>{{ gara.data_fine|date:"d M Y" }}</small>
+                    </div>
+                    <p class="mb-1"><strong>Specialità:</strong> {{ gara.specialita }}</p>
+
+                    <div class="mt-3">
+                        <h6>Gestisci Risultati:</h6>
+                        <a href="{% url 'inserisci_risultato' gara.id %}" class="btn btn-sm btn-success mt-2" aria-label="Inserisci Risultato">Inserisci Risultato</a>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Non ci sono gare passate.</p>
+    {% endif %}
 </div>
 {% endblock %}

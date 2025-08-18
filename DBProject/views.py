@@ -8,7 +8,9 @@ from .forms import RegistrazioneForm, LoginForm, AddAtletaForm, AddAllenatoreFor
 from .models import Utente, Atleta, Allenatore, PresidenteSquadra, PresidenteRegione, Squadra, Gara, GaraSpecialita, \
     Specialita, Partecipazione
 import time
-
+from django.utils.timezone import now
+from datetime import timedelta
+import logging
 
 def is_atleta(user):
     return user.is_authenticated and user.tipo == 'ATLETA'
@@ -199,6 +201,8 @@ def dashboard_pres_squadra(request):
     return render(request, 'DBProject/dashboard_pres_squadra.html', context)
 
 
+logger = logging.getLogger(__name__)
+
 @login_required(login_url='/login/')
 @user_passes_test(is_allenatore)
 def dashboard_allenatore(request):
@@ -206,30 +210,35 @@ def dashboard_allenatore(request):
     squadra = allenatore.squadra
     atleti_squadra = Atleta.objects.filter(squadra=squadra)
 
-    gare_specialita = GaraSpecialita.objects.all().order_by('id_gara__data_inizio')
+    gare_passate = Gara.objects.filter(data_fine__lt=now()).order_by('data_fine')
+    gare_future = Gara.objects.filter(data_fine__gte=now()).order_by('data_inizio')
 
     forms_iscrizione = {}
     iscritti_per_gara = {}
+    specialita_per_gara = {}
 
-    for gs in gare_specialita:
-        forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
-
-        iscritti_per_gara[gs.pk] = Partecipazione.objects.filter(
-            id_gara=gs.id_gara,
-            id_specialita=gs.id_specialita
-        ).select_related('id_atleta__utente').order_by('id_atleta__utente__username')
+    for gara in gare_future:
+        gare_specialita = GaraSpecialita.objects.filter(id_gara=gara)
+        specialita_per_gara[gara.pk] = gare_specialita
+        for gs in gare_specialita:
+            forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
+            iscritti_per_gara[gs.pk] = Partecipazione.objects.filter(
+                id_gara=gs.id_gara,
+                id_specialita=gs.id_specialita
+            ).select_related('id_atleta__utente').order_by('id_atleta__utente__username')
 
     context = {
         'allenatore': allenatore,
         'squadra': squadra,
         'atleti_squadra': atleti_squadra,
         'tipo_utente': 'ALLENATORE',
-        'gare_specialita': gare_specialita,
+        'gare_passate': gare_passate,
+        'gare_future': gare_future,
         'forms_iscrizione': forms_iscrizione,
         'iscritti_per_gara': iscritti_per_gara,
+        'specialita_per_gara': specialita_per_gara,
     }
     return render(request, 'DBProject/dashboard_allenatore.html', context)
-
 
 @login_required(login_url='/login/')
 @user_passes_test(is_pres_squadra)
@@ -301,10 +310,10 @@ def rimuovi_gara_view(request, gara_id):
 @login_required(login_url='/login/')
 @user_passes_test(is_allenatore)
 def iscrivi_atleti_gara(request, gara_specialita_id):
-    if request.method == 'POST':
-        allenatore = get_object_or_404(Allenatore, utente=request.user)
-        gara_specialita = get_object_or_404(GaraSpecialita, pk=gara_specialita_id)
+    allenatore = get_object_or_404(Allenatore, utente=request.user)
+    gara_specialita = get_object_or_404(GaraSpecialita, pk=gara_specialita_id)
 
+    if request.method == 'POST':
         form = IscrizioneGaraForm(request.POST, gara_specialita=gara_specialita, allenatore=allenatore)
 
         if form.is_valid():
@@ -312,6 +321,11 @@ def iscrivi_atleti_gara(request, gara_specialita_id):
 
             iscrizioni_create = 0
             for atleta in atleti_selezionati:
+                # Ensure the athlete belongs to the coach's team
+                if atleta.squadra != allenatore.squadra:
+                    messages.error(request, f"L'atleta '{atleta.utente.username}' non appartiene alla tua squadra.")
+                    continue
+
                 try:
                     Partecipazione.objects.create(
                         id_atleta=atleta,
@@ -324,8 +338,7 @@ def iscrivi_atleti_gara(request, gara_specialita_id):
                     messages.warning(request, f"L'atleta '{atleta.utente.username}' era già iscritto alla gara.")
 
             if iscrizioni_create > 0:
-                messages.success(request,
-                                 f"Iscrizione di {iscrizioni_create} atleti alla gara completata con successo.")
+                messages.success(request, f"Iscrizione di {iscrizioni_create} atleti alla gara completata con successo.")
         else:
             messages.error(request, "Errore durante l'iscrizione. Controlla i dati del form.")
 
@@ -383,11 +396,11 @@ def dashboard_pres_regione(request):
 
 @login_required(login_url='/login/')
 @user_passes_test(is_allenatore)
-def inserisci_risultato_view(request, partecipazione_id):
-    partecipazione = get_object_or_404(Partecipazione, pk=partecipazione_id)
+def inserisci_risultato_view(request, id_partecipazione):
     allenatore = get_object_or_404(Allenatore, utente=request.user)
+    partecipazione = get_object_or_404(Partecipazione, pk=id_partecipazione)
 
-    # Verifica che l'allenatore sia della squadra dell'atleta
+    # Verify that the coach belongs to the same team as the athlete
     if partecipazione.id_atleta.squadra != allenatore.squadra:
         messages.error(request, "Non hai i permessi per inserire i risultati per questo atleta.")
         return redirect('dashboard_allenatore')
@@ -396,9 +409,13 @@ def inserisci_risultato_view(request, partecipazione_id):
         form = RisultatoForm(request.POST, instance=partecipazione)
         if form.is_valid():
             form.save()
-            messages.success(request,
-                             f"Risultato per l'atleta '{partecipazione.id_atleta.utente.username}' inserito con successo!")
+            messages.success(
+                request,
+                f"Risultato per l'atleta '{partecipazione.id_atleta.utente.username}' inserito con successo!"
+            )
             return redirect('dashboard_allenatore')
+        else:
+            messages.error(request, "Errore durante l'inserimento del risultato. Controlla i dati inseriti.")
     else:
         form = RisultatoForm(instance=partecipazione)
 

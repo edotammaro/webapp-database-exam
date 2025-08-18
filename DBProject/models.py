@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from datetime import timedelta
 
 
 # Modello Utente personalizzato
@@ -114,7 +115,13 @@ class Gara(models.Model):
     presidente_regione = models.ForeignKey(PresidenteRegione, on_delete=models.CASCADE)
     luogo = models.CharField(max_length=200)
     data_inizio = models.DateField()
+    data_fine = models.DateField(blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        # Set data_fine to one day after data_inizio if not provided
+        if not self.data_fine:
+            self.data_fine = self.data_inizio + timedelta(days=1)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Gara a {self.luogo} ({self.data_inizio})"
