@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Dashboard Allenatore</h2>
+    <h2><strong>Dashboard Allenatore</strong></h2>
     <h3>Benvenuto, {{ allenatore.utente.username }}!</h3>
     <p>Gestisci gli atleti della tua squadra: <strong>{{ allenatore.squadra.nome }}</strong></p>
 
@@ -18,7 +18,7 @@
     {% endif %}
 
     <div class="mt-4">
-        <h4>Atleti della tua squadra</h4>
+        <h4><strong>Atleti della tua squadra</strong></h4>
         <ul class="list-group">
             {% for atleta in atleti_squadra %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -29,13 +29,13 @@
     </div>
 
 <div class="mt-5">
-    <h4>Gare Future</h4>
+    <h4><strong>Calendario Gare</strong></h4>
     {% if gare_future %}
         <ul class="list-group">
             {% for gara in gare_future %}
                 <li class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">Gara a {{ gara.luogo }}</h5>
+                        <h5 class="mb-1"><strong>Gara a {{ gara.luogo }}</strong></h5>
                         <small>{{ gara.data_inizio|date:"d M Y" }}</small>
                     </div>
                     <p class="mb-1"><strong>Data Fine:</strong> {{ gara.data_fine|date:"d M Y" }}</p>
@@ -51,6 +51,17 @@
                                         {{ forms_iscrizione|get_item:specialita.pk }}
                                         <button type="submit" class="btn btn-primary btn-sm" aria-label="Iscrivi Atleti">Iscrivi</button>
                                     </form>
+                                 <div class="mt-2">
+                                        <h6>Atleti Iscritti:</h6>
+                                        <ul>
+                                            {% for partecipazione in iscrizioni_per_specialita|get_item:specialita.pk %}
+                                                <li>
+                                                    {{ partecipazione.id_atleta.utente.username }}
+                                                    <a href="{% url 'rimuovi_iscrizione' partecipazione.pk %}" class="btn btn-danger btn-sm" aria-label="Rimuovi Iscrizione">Rimuovi</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -64,7 +75,7 @@
 </div>
 
 <div class="mt-5">
-    <h4>Gare Passate</h4>
+    <h4><strong>Calendario Gare Passate</strong></h4>
     {% if gare_passate %}
         <ul class="list-group">
             {% for gara in gare_passate %}

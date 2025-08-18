@@ -131,7 +131,7 @@ class IscrizioneGaraForm(forms.Form):
     atleti_selezionati = forms.ModelMultipleChoiceField(
         queryset=Atleta.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        label="Seleziona gli atleti da iscrivere"
+        label="Seleziona gli atleti della squadra da iscrivere"
     )
 
     def __init__(self, *args, **kwargs):

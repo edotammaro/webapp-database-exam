@@ -233,17 +233,18 @@ def dashboard_allenatore(request):
     gare_future = Gara.objects.filter(data_fine__gte=now()).order_by('data_inizio')
 
     forms_iscrizione = {}
-    iscritti_per_gara = {}
-    specialita_per_gara = {gara.pk: gara.garaspecialita_set.all() for gara in gare_future}
+    iscrizioni_per_specialita = {}
+    specialita_per_gara = {} # Initialize an empty dictionary here
 
     for gara in gare_future:
         gare_specialita = GaraSpecialita.objects.filter(id_gara=gara)
         specialita_per_gara[gara.pk] = gare_specialita
         for gs in gare_specialita:
             forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
-            iscritti_per_gara[gs.pk] = Partecipazione.objects.filter(
+            iscrizioni_per_specialita[gs.pk] = Partecipazione.objects.filter(
                 id_gara=gs.id_gara,
-                id_specialita=gs.id_specialita
+                id_specialita=gs.id_specialita,
+                id_atleta__squadra=squadra  # Filter by the coach's team
             ).select_related('id_atleta__utente').order_by('id_atleta__utente__username')
 
     context = {
@@ -254,10 +255,11 @@ def dashboard_allenatore(request):
         'gare_passate': gare_passate,
         'gare_future': gare_future,
         'forms_iscrizione': forms_iscrizione,
-        'iscritti_per_gara': iscritti_per_gara,
+        'iscrizioni_per_specialita': iscrizioni_per_specialita,
         'specialita_per_gara': specialita_per_gara,
     }
     return render(request, 'DBProject/dashboard_allenatore.html', context)
+
 
 @login_required(login_url='/login/')
 @user_passes_test(is_pres_squadra)
@@ -369,6 +371,7 @@ def iscrivi_atleti_gara(request, gara_specialita_id):
 def rimuovi_iscrizione(request, partecipazione_id):
     iscrizione = get_object_or_404(Partecipazione, pk=partecipazione_id)
 
+    # Check if the coach has permission to remove this registration
     if iscrizione.id_atleta.squadra.allenatori.filter(utente=request.user).exists():
         atleta_nome = iscrizione.id_atleta.utente.username
         iscrizione.delete()
@@ -377,6 +380,7 @@ def rimuovi_iscrizione(request, partecipazione_id):
         messages.error(request, "Non hai i permessi per rimuovere questa iscrizione.")
 
     return redirect('dashboard_allenatore')
+
 
 
 @login_required(login_url='/login/')
