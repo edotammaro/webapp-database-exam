@@ -152,6 +152,7 @@ class Partecipazione(models.Model):
         ('ISCRITTO', 'Iscritto'),
         ('COMPLETATO', 'Completato'),
         ('SQUALIFICATO', 'Squalificato'),
+        ('NON PARTITO', 'Non partito'),
     )
 
     id_atleta = models.ForeignKey(Atleta, on_delete=models.CASCADE)

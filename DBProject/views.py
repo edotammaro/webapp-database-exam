@@ -413,16 +413,28 @@ def dashboard_pres_regione(request):
     gare_passate = Gara.objects.filter(data_fine__lt=now()).order_by('data_fine')
 
     specialita_per_gara = {}
+    iscritti_per_gara_futura = {}
+
     for gara in gare_future:
         specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
+        # Recupera tutti gli iscritti per ogni gara futura
+        iscritti_per_gara_futura[gara.pk] = Partecipazione.objects.filter(id_gara=gara).select_related(
+            'id_atleta__utente', 'id_specialita').order_by('id_atleta__utente__username')
+
+    # Nuova sezione per gestire i risultati delle gare passate
+    risultati_per_gara_passata = {}
     for gara in gare_passate:
         specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
+        risultati_per_gara_passata[gara.pk] = Partecipazione.objects.filter(id_gara=gara).select_related(
+            'id_atleta__utente', 'id_specialita').order_by('id_specialita__nome')
 
     context = {
         'tipo_utente': 'PRES_REGIONE',
         'gare_future': gare_future,
         'gare_passate': gare_passate,
-        'specialita_per_gara': specialita_per_gara
+        'specialita_per_gara': specialita_per_gara,
+        'risultati_per_gara_passata': risultati_per_gara_passata,
+        'iscritti_per_gara_futura': iscritti_per_gara_futura,
     }
     return render(request, 'DBProject/dashboard_pres_regione.html', context)
 
