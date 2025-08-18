@@ -19,7 +19,11 @@
         </div>
     </div>
 
-    <h2 class="mt-5"><strong>Le mie Iscrizioni e Risultati</strong></h2>
+    <h2 class="mt-5 clickable-heading" data-bs-toggle="collapse" data-bs-target="#collapseIscrizioni" aria-expanded="false" aria-controls="collapseIscrizioni">
+        <strong>Clicca qui per vedere le tue Iscrizioni e Risultati</strong>
+    </h2>
+
+<div class="collapse" id="collapseIscrizioni">
     {% if iscrizioni_atleta %}
     <table class="table table-striped table-bordered">
         <thead>
@@ -44,8 +48,15 @@
     {% else %}
     <div class="alert alert-info">Non sei iscritto a nessuna gara.</div>
     {% endif %}
+</div>
 
-    <h2 class="mt-5"><strong>Calendario Gare</strong></h2>
+
+
+  <h2 class="mt-5 clickable-heading" data-bs-toggle="collapse" data-bs-target="#collapseCalendario" aria-expanded="false" aria-controls="collapseCalendario">
+        <strong>Clicca qui per vedere il Calendario Gare</strong>
+  </h2>
+
+<div class="collapse" id="collapseCalendario">
     <table class="table table-striped table-bordered">
         <thead>
             <tr>
@@ -55,24 +66,24 @@
                 <th>Data</th>
                 <th>Iscrizione</th>
             </tr>
-</thead>
-<tbody>
-    {% for item in calendario_con_stato %}
-    <tr>
-        <td>{{ item.gara_specialita.id_gara.luogo }}</td>
-        <td>{{ item.gara_specialita.id_specialita.nome }}</td>
-        <td>{{ item.gara_specialita.sesso }}</td>
-        <td>{{ item.gara_specialita.id_gara.data_inizio }}</td>
-        <td>
-            {% if item.is_iscritto %}
-                <span class="text-success">✔️ Iscritto</span>
-            {% else %}
-                <span class="text-danger">❌ Non Iscritto</span>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
-</table>
+        </thead>
+        <tbody>
+            {% for item in calendario_con_stato %}
+            <tr>
+                <td>{{ item.gara_specialita.id_gara.luogo }}</td>
+                <td>{{ item.gara_specialita.id_specialita.nome }}</td>
+                <td>{{ item.gara_specialita.sesso }}</td>
+                <td>{{ item.gara_specialita.id_gara.data_inizio }}</td>
+                <td>
+                    {% if item.is_iscritto %}
+                        <span class="text-success">✔️ Iscritto</span>
+                    {% else %}
+                        <span class="text-danger">❌ Non Iscritto</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

@@ -116,7 +116,7 @@ def dashboard_view(request):
             # Funzionalità 2, 3 e 4: Visualizzazione delle iscrizioni attuali e dei risultati
             iscrizioni_atleta = Partecipazione.objects.filter(id_atleta=atleta_obj).select_related(
                 'id_gara', 'id_specialita'
-            ).order_by('-id_gara__data_inizio')
+            ).order_by('id_gara__data_inizio')
 
             # Prepara i dati del calendario in modo più efficiente per il template
             calendario_con_stato = []
