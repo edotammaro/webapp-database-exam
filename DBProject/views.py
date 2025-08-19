@@ -222,6 +222,7 @@ def dashboard_pres_squadra(request):
 
 logger = logging.getLogger(__name__)
 
+
 @login_required(login_url='/login/')
 @user_passes_test(is_allenatore)
 def dashboard_allenatore(request):
@@ -234,18 +235,28 @@ def dashboard_allenatore(request):
 
     forms_iscrizione = {}
     iscrizioni_per_specialita = {}
-    specialita_per_gara = {} # Initialize an empty dictionary here
+    specialita_per_gara = {}
+    risultati_per_gara_passata = {}
+
+    all_gare = list(gare_future) + list(gare_passate)
+
+    for gara in all_gare:
+        specialita_per_gara[gara.pk] = GaraSpecialita.objects.filter(id_gara=gara)
 
     for gara in gare_future:
-        gare_specialita = GaraSpecialita.objects.filter(id_gara=gara)
-        specialita_per_gara[gara.pk] = gare_specialita
-        for gs in gare_specialita:
+        for gs in specialita_per_gara.get(gara.pk, []):
             forms_iscrizione[gs.pk] = IscrizioneGaraForm(gara_specialita=gs, allenatore=allenatore)
             iscrizioni_per_specialita[gs.pk] = Partecipazione.objects.filter(
                 id_gara=gs.id_gara,
                 id_specialita=gs.id_specialita,
-                id_atleta__squadra=squadra  # Filter by the coach's team
+                id_atleta__squadra=squadra
             ).select_related('id_atleta__utente').order_by('id_atleta__utente__username')
+
+    for gara in gare_passate:
+        risultati_per_gara_passata[gara.pk] = Partecipazione.objects.filter(
+            id_gara=gara,
+            id_atleta__squadra=squadra
+        ).select_related('id_atleta__utente', 'id_specialita').order_by('id_specialita__nome')
 
     context = {
         'allenatore': allenatore,
@@ -257,6 +268,7 @@ def dashboard_allenatore(request):
         'forms_iscrizione': forms_iscrizione,
         'iscrizioni_per_specialita': iscrizioni_per_specialita,
         'specialita_per_gara': specialita_per_gara,
+        'risultati_per_gara_passata': risultati_per_gara_passata,
     }
     return render(request, 'DBProject/dashboard_allenatore.html', context)
 
