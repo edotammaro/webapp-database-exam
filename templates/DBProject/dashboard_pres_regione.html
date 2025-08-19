@@ -22,6 +22,10 @@
                         <div class="d-flex w-100 justify-content-between">
                             <h5 class="mb-1"><strong>Gara a {{ gara.luogo }}</strong></h5>
                             <small>{{ gara.data_inizio|date:"d M Y" }}</small>
+                            <form method="post" action="{% url 'rimuovi_gara' gara.id %}" onsubmit="return confirm('Sei sicuro di voler rimuovere questa gara?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Rimuovi</button>
+                            </form>
                         </div>
                         <p class="mb-1"><strong>Data Fine:</strong> {{ gara.data_fine|date:"d M Y" }}</p>
 
