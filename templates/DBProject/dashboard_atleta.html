@@ -1,5 +1,5 @@
 {% extends 'DBProject/base.html' %}
-
+{% load app_filters %}
 {% block content %}
 <div class="container mt-5">
     <h1><strong>Dashboard Atleta</strong></h1>
@@ -14,76 +14,93 @@
             <form method="post" action="{% url 'aggiorna_stato_atleta' %}">
                 {% csrf_token %}
                 {{ form_stato.as_p }}
-                <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
+                <button type="submit" class="btn btn-primary" id="submitStato">Aggiorna Stato</button>
             </form>
         </div>
     </div>
 
+    {% if messages %}
+        <div class="messages mt-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <h2 class="mt-5 clickable-heading" data-bs-toggle="collapse" data-bs-target="#collapseIscrizioni" aria-expanded="false" aria-controls="collapseIscrizioni">
-        <strong>Clicca qui per vedere le tue Iscrizioni e Risultati</strong>
+        <strong>Clicca qui per vedere le tue Iscrizioni e Risultati futuri</strong>
     </h2>
 
-<div class="collapse" id="collapseIscrizioni">
-    {% if iscrizioni_atleta %}
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>Gara</th>
-                <th>Specialità</th>
-                <th>Stato Iscrizione</th>
-                <th>Risultato</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for iscrizione in iscrizioni_atleta %}
-            <tr>
-                <td>{{ iscrizione.id_gara.luogo }} ({{ iscrizione.id_gara.data_inizio|date:"d M Y" }})</td>
-                <td>{{ iscrizione.id_specialita.nome }}</td>
-                <td>{{ iscrizione.get_stato_iscrizione_display }}</td>
-                <td>{{ iscrizione.risultato|default:"N/A" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="alert alert-info">Non sei iscritto a nessuna gara.</div>
-    {% endif %}
-</div>
+    <div class="collapse" id="collapseIscrizioni">
+        {% if iscrizioni_atleta %}
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Gara</th>
+                    <th>Specialità</th>
+                    <th>Risultato</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for iscrizione in iscrizioni_atleta %}
+                <tr>
+                    <td>{{ iscrizione.id_gara.luogo }} ({{ iscrizione.id_gara.data_inizio|date:"d M Y" }})</td>
+                    <td>{{ iscrizione.id_specialita.nome }}</td>
+                    <td>{{ iscrizione.risultato|default:"N/A" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert alert-info">Non sei iscritto a nessuna gara futura.</div>
+        {% endif %}
+    </div>
 
-
-
-  <h2 class="mt-5 clickable-heading" data-bs-toggle="collapse" data-bs-target="#collapseCalendario" aria-expanded="false" aria-controls="collapseCalendario">
+    <h2 class="mt-5 clickable-heading" data-bs-toggle="collapse" data-bs-target="#collapseCalendario" aria-expanded="false" aria-controls="collapseCalendario">
         <strong>Clicca qui per vedere il calendario delle gare</strong>
-  </h2>
+    </h2>
 
-<div class="collapse" id="collapseCalendario">
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>Gara</th>
-                <th>Specialità</th>
-                <th>Sesso</th>
-                <th>Data</th>
-                <th>Iscrizione</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in calendario_con_stato %}
-            <tr>
-                <td>{{ item.gara_specialita.id_gara.luogo }}</td>
-                <td>{{ item.gara_specialita.id_specialita.nome }}</td>
-                <td>{{ item.gara_specialita.sesso }}</td>
-                <td>{{ item.gara_specialita.id_gara.data_inizio }}</td>
-                <td>
-                    {% if item.is_iscritto %}
-                        <span class="text-success">✔️ Iscritto</span>
-                    {% else %}
-                        <span class="text-danger">❌ Non Iscritto</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="collapse" id="collapseCalendario">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Gara</th>
+                    <th>Specialità</th>
+                    <th>Sesso</th>
+                    <th>Data</th>
+                    <th>Iscrizione</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in calendario_con_stato %}
+                <tr>
+                    <td>{{ item.gara_specialita.id_gara.luogo }}</td>
+                    <td>{{ item.gara_specialita.id_specialita.nome }}</td>
+                    <td>{{ item.gara_specialita.sesso }}</td>
+                    <td>{{ item.gara_specialita.id_gara.data_inizio }}</td>
+                    <td>
+                        {% if item.is_iscritto %}
+                            <span class="text-success">✔️ Iscritto</span>
+                        {% else %}
+                            <span class="text-danger">❌ Non Iscritto</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById('submitStato').onclick = function(e) {
+            var selectElement = document.getElementById('id_stato');
+            var selectedValue = selectElement.options[selectElement.selectedIndex].value;
+            if (selectedValue === 'INFORTUNATO') {
+                if (!confirm('Sei sicuro di voler cambiare il tuo stato in Infortunato? Tutte le tue iscrizioni alle gare future verranno annullate.')) {
+                    e.preventDefault();
+                }
+            }
+        };
+    </script>
 </div>
 {% endblock %}

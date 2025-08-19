@@ -89,7 +89,7 @@ class Allenatore(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='allenatori' # Aggiunto related_name
+        related_name='allenatori'
     )
 
     def __str__(self):
@@ -118,7 +118,6 @@ class Gara(models.Model):
     data_fine = models.DateField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        # Set data_fine to one day after data_inizio if not provided
         if not self.data_fine:
             self.data_fine = self.data_inizio + timedelta(days=1)
         super().save(*args, **kwargs)
