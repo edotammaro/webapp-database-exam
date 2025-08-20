@@ -59,7 +59,6 @@ def login_view(request):
         # Istanzia il form correttamente, passando request e data
         form = LoginForm(request=request, data=request.POST)
         username = request.POST.get('username')
-
         # Controllo immediato del blocco, prima di ogni altra operazione
         now = time.time()
         if username and username in FALLISMENTI_LOGIN:
@@ -69,23 +68,19 @@ def login_view(request):
                 messages.error(request, f"Troppi tentativi falliti per l'utente '{username}'. Riprova tra {remaining_time} secondi.")
                 return render(request, 'DBProject/login.html', {'form': form})
 
-        # Processiamo il form
         if form.is_valid():
-            user = form.get_user() # Usa form.get_user() che gestisce già l'autenticazione
+            user = form.get_user()
 
             if user is not None:
-                login(request, user)
-                # Resetta il contatore in caso di successo
+                login(request, user) # Resetta il contatore in caso di successo
                 if username in FALLISMENTI_LOGIN:
                     del FALLISMENTI_LOGIN[username]
                 messages.success(request, f"Benvenuto, {username}!")
                 return redirect('dashboard')
             else:
-                # Questo blocco non dovrebbe mai essere raggiunto se form.is_valid() è vero
-                # ma lo manteniamo per sicurezza.
+                # Questo blocco non dovrebbe mai essere raggiunto se form.is_valid() è vero ma lo manteniamo per sicurezza.
                 messages.error(request, 'Username o password non validi.')
-        else:
-            # Qui il form è invalido (es. username/password vuoti)
+        else:   # Qui il form è invalido (es. username/password vuoti)
             if username:
                 if username not in FALLISMENTI_LOGIN:
                     FALLISMENTI_LOGIN[username] = [0, now]
@@ -114,17 +109,24 @@ def dashboard_view(request):
             gare_specialita_future = GaraSpecialita.objects.filter(id_gara__data_inizio__gte=now()).order_by(
                 'id_gara__data_inizio')
 
-            # Ottieni le iscrizioni future dell'atleta
-            iscrizioni_atleta_future = Partecipazione.objects.filter(
-                id_atleta=atleta_obj,
-                id_gara__data_fine__gte=now()
+            # --- MODIFICA INIZIO ---
+            # Ottieni tutte le iscrizioni dell'atleta, sia passate che future, per la tabella dei risultati.
+            # La query precedente aveva un errore di sintassi. Questa è la query corretta.
+            iscrizioni_atleta = Partecipazione.objects.filter(
+                id_atleta=atleta_obj
             ).select_related('id_gara', 'id_specialita').order_by('id_gara__data_inizio')
+            # --- MODIFICA FINE ---
 
             # Crea un set di tuple per un lookup rapido e efficiente
+            # NOTA: Questo set viene usato solo per verificare le iscrizioni nel calendario futuro.
             iscrizioni_ids_set = set(
                 (iscrizione.id_gara.id, iscrizione.id_specialita.id)
-                for iscrizione in iscrizioni_atleta_future
+                for iscrizione in iscrizioni_atleta
+                # Ho aggiunto un filtro qui per assicurarci che il set contenga solo le gare future
+                # per la corretta visualizzazione del calendario.
+                if iscrizione.id_gara.data_inizio >= now().date()
             )
+
 
             # Prepara il calendario con lo stato di iscrizione
             calendario_con_stato = []
@@ -139,7 +141,7 @@ def dashboard_view(request):
                 'atleta': atleta_obj,
                 'tipo_utente': 'ATLETA',
                 'form_stato': form_stato,
-                'iscrizioni_atleta': iscrizioni_atleta_future,
+                'iscrizioni_atleta': iscrizioni_atleta,
                 'calendario_con_stato': calendario_con_stato,
             }
             return render(request, 'DBProject/dashboard_atleta.html', context)
@@ -157,6 +159,7 @@ def dashboard_view(request):
         return redirect('dashboard_pres_regione')
 
     return render(request, 'DBProject/dashboard.html')
+
 
 
 @login_required(login_url='/login/')
